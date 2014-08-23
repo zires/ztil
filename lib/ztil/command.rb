@@ -1,34 +1,23 @@
 # encoding: utf-8
 require 'thor'
-require 'rest-client'
-require 'json'
 
 module Ztil
   class Command < Thor
     include Thor::Actions
 
-    def self.source_root
-      File.expand_path File.join( File.dirname(__FILE__), '../../', 'Backup' )
-    end
-
-    BAIDU_AK  = 'A0f00186ba072b824d88d6300c9f7f86'
-    BAIDU_URL = 'http://api.map.baidu.com'
-
-    # 百度的地理位置API | http://developer.baidu.com/map/index.php?title=webapi/guide/webservice-geocoding
-
     desc 'geocoder ADDRESS', '根据百度API, 将地址转换成经纬度'
     method_option :city, desc: '地址所在的城市', required: false
     def geocoder(address)
-      r = JSON.parse RestClient.get("#{BAIDU_URL}/geocoder/v2/", { params: {address: address, output: :json, ak: BAIDU_AK, city: options[:city]} })
-      say JSON.pretty_generate(r)
+      require 'ztil/baidu'
+      say Baidu.geocoder(address, options)
     end
 
     desc 'coordcoder LOCATION', '根据百度API, 将经纬度转换成地址, 纬度(小)在前, 经度在后, 逗号分隔'
     method_option :coordtype, desc: '坐标的类型', default: 'wgs84ll', required: false, aliases: 't',
       desc: '目前支持的坐标类型包括：bd09ll（百度经纬度坐标）、gcj02ll（国测局经纬度坐标）、wgs84ll（ GPS经纬度）'
     def coordcoder(location)
-      r = JSON.parse RestClient.get("#{BAIDU_URL}/geocoder/v2/", { params: {location: location, output: :json, ak: BAIDU_AK, coordtype: options[:coordtype]} })
-      say JSON.pretty_generate(r)
+      require 'ztil/baidu'
+      say Baidu.coordcoder(location, options)
     end
 
     # 备份数据库 | https://github.com/meskyanichi/backup
@@ -36,12 +25,13 @@ module Ztil
     # 关心的是数据库，存储以及执行时间和邮件通知
     #
     # @example
-    #   ztil backup --databases="mysql,mongodb" --storages="qi_niu" --email="xxx@xxx.com" --schedule="1.day&4:30 am"
+    #   ztil backup --databases="mysql,mongodb" --storages="qi_niu" --email="xxx@xxx.com" --schedule="1.day&4:30 am" --run_prefix="bundle exec"
     desc 'backup DATABASE_NAME', '备份数据库, 传入all表示所有databases'
-    method_option :databases, desc: '需要备份的数据库类型, 支持mysql以及mongodb', required: true
-    method_option :storages,  desc: '备份数据的存储方式, 支持存储到七牛'
-    method_option :email,     desc: '备份成功后通知的邮箱'
-    method_option :schedule,  desc: '按计划执行, 默认只执行一次'
+    method_option :databases,  desc: '需要备份的数据库类型, 支持mysql以及mongodb', required: true
+    method_option :storages,   desc: '备份数据的存储方式, 支持存储到七牛'
+    method_option :email,      desc: '备份成功后通知的邮箱'
+    method_option :schedule,   desc: '按计划执行, 默认只执行一次'
+    method_option :run_prefix, desc: '运行命令的前缀, 例如bundle exec'
     def backup(name)
       storages = options[:storages] || 'local'
 
@@ -104,11 +94,11 @@ module Ztil
         append_to_file( File.join(schedule_config_path, 'schedule.rb') ) do
           <<-SCH
   every #{time}, :at => '#{at}' do
-    command "backup_zh perform -t #{name}"
+    command "#{options[:run_prefix]} backup_zh perform -t #{name}"
   end
           SCH
         end
-        run "whenever -f #{File.join(schedule_config_path, 'schedule.rb')}"
+        run "whenever -f #{File.join(schedule_config_path, 'schedule.rb')} --update-crontab"
       else
         run "backup_zh perform -t #{name}"
       end
