@@ -28,9 +28,9 @@ module Ztil
     #   ztil backup --databases="mysql,mongodb" --storages="qi_niu" --email="xxx@xxx.com" --schedule="1.day&4:30 am" --run_prefix="bundle exec"
     desc 'backup DATABASE_NAME', '备份数据库, DATABASE_NAME最好为数据库名称(可修改)'
     method_option :databases,  desc: '需要备份的数据库类型, 支持(mongodb, mysql, openldap, postgresql, redis, riak)', required: true, aliases: 'd'
-    method_option :storages,   desc: '备份数据的存储方式, 支持存储到七牛(local, qi_niu)', aliases: 's'
+    method_option :storages,   desc: '备份数据的存储方式, 支持存储到七牛(qi_niu), 本地(local)', aliases: 's'
     method_option :email,      desc: '备份成功后通知的邮箱', aliases: 'e'
-    method_option :schedule,   desc: '按计划执行, 默认只执行一次', aliases: 'S'
+    method_option :schedule,   desc: '按计划执行, 默认只执行一次, eq: `1.day&4:30 am`', aliases: 'S'
     method_option :run_prefix, desc: '运行任务命令的前缀, 例如`bundle exec`', aliases: 'r'
     def backup(name)
       storages = options[:storages] || 'local'
