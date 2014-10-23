@@ -112,5 +112,44 @@ module Ztil
       run "ruby -run -ehttpd . -p#{options[:port]}"
     end
 
+    # 在当前rails目录下安装capistrano
+    # https://github.com/zires/capistrano-3-rails-template
+    desc 'cap_me[PATH]', "在当前目录下安装capistrano的支持"
+    def cap_me(path = nil)
+      path ||= '.'
+      gemfile = File.expand_path("#{path}/Gemfile")
+
+      raise "Can't find Gemfile #{gemfile}" unless File.exists?(gemfile)
+
+      append_to_file gemfile do
+        <<-GEMS
+
+### Add by cap me
+gem 'unicorn'
+group :development do
+  gem 'capistrano', '>= 3.1.0'
+  gem 'capistrano-rails', '>= 1.1.0'
+  gem 'capistrano-bundler'
+  gem 'capistrano-rbenv', '>= 2.0'
+end
+
+        GEMS
+      end
+
+      run "cd #{path} && bundle install && bundle exec cap install"
+
+      tmp_dir = Dir.mktmpdir
+      run "git clone https://github.com/zires/capistrano-3-rails-template.git #{tmp_dir}"
+      run "cp -R #{tmp_dir}/config #{path}/"
+      run "cp -R #{tmp_dir}/lib #{path}/"
+
+      uncomment_lines File.join(path, 'Capfile'), /require.+rbenv/
+      uncomment_lines File.join(path, 'Capfile'), /require.+bundler/
+      uncomment_lines File.join(path, 'Capfile'), /require.+rails/
+
+      run "cd #{path} && bundle exec cap production deploy --dry-run"
+
+    end
+
   end
 end
