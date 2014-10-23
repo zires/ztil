@@ -142,6 +142,9 @@ end
       run "git clone https://github.com/zires/capistrano-3-rails-template.git #{tmp_dir}"
       run "cp -R #{tmp_dir}/config #{path}/"
       run "cp -R #{tmp_dir}/lib #{path}/"
+      append_to_file File.join(path, 'Capfile') do
+        "Dir.glob('lib/capistrano/tasks/*.cap').each { |r| import r }"
+      end
 
       uncomment_lines File.join(path, 'Capfile'), /require.+rbenv/
       uncomment_lines File.join(path, 'Capfile'), /require.+bundler/
